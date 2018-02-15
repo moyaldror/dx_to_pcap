@@ -1,10 +1,13 @@
 from __future__ import absolute_import
 
 from dx_to_pcap.plugins.plugin_base import BasePlugin
+from dx_to_pcap.plugins.new_dx_format_plugin import NewDxFormatPlugin
+from dx_to_pcap.plugins.old_dx_format_plugin import OldDxFormatPlugin
 import logging
-logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
-from scapy.all import Ether, import_hexcap
 import sys
+sys.stderr = None
+from scapy.all import Ether, import_hexcap, TCP
+sys.stderr = sys.__stderr__
 
 try:
     from StringIO import StringIO
@@ -13,12 +16,18 @@ except ImportError:
 
 
 class DxPacketParser:
-    def __init__(self, plugin):
-        if not plugin or not isinstance(plugin, BasePlugin):
-            raise ValueError('Plugin must be an instance of dx_to_pcap.plugins.plugin_base.BasePlugin')
+    _PLUGINS = [NewDxFormatPlugin(), OldDxFormatPlugin()]
+
+    def __init__(self):
         self._data = []
-        self._plugin = plugin
+        self._plugin = 0
         self._should_add_line = False
+
+    def _get_plugin(self):
+        return self._PLUGINS[self._plugin]
+
+    def _toggle_parser_plugin(self):
+        self._plugin = (self._plugin + 1) % 2
 
     def _fix_packet(self):
         res = []
@@ -26,11 +35,11 @@ class DxPacketParser:
         ascii_data_to_store = []
 
         for line in self._data:
-            ascii_data_to_store.append(self._plugin.get_ascii_from_line(line))
-            hex_data_to_store.append(self._plugin.get_hex_from_line(line))
+            ascii_data_to_store.append(self._get_plugin().get_ascii_from_line(line))
+            hex_data_to_store.append(self._get_plugin().get_hex_from_line(line))
 
-        hex_data_to_store = ''.join(hex_data_to_store)[self._plugin.get_offset() * 2:]
-        ascii_data_to_store = ''.join(ascii_data_to_store)[self._plugin.get_offset():]
+        hex_data_to_store = ''.join(hex_data_to_store)[self._get_plugin().get_offset() * 2:]
+        ascii_data_to_store = ''.join(ascii_data_to_store)[self._get_plugin().get_offset():]
 
         index = 0
         while True:
@@ -55,14 +64,19 @@ class DxPacketParser:
 
     @staticmethod
     def _read_hex(data):
-        old_stdin, sys.stdin = sys.stdin, StringIO(''.join([*data, chr(4)]))
+        old_stdin, sys.stdin = sys.stdin, StringIO(''.join(data))
         pkt = Ether(import_hexcap())
         sys.stdin = old_stdin
         return pkt
 
     def _export_packet(self):
         data_io = self._fix_packet()
-        return self._read_hex(data=data_io)
+        data_io.append(chr(4))
+        pkt = self._read_hex(data=data_io)
+        if pkt.getlayer(TCP) is None:
+           self._toggle_parser_plugin()
+           pkt = self._read_hex(data=data_io)
+        return pkt
 
     def consume_line(self, line):
         try:
@@ -71,9 +85,9 @@ class DxPacketParser:
             if self._should_add_line:
                 self._data.append(line)
 
-            if self._plugin.packet_start(line):
+            if self._get_plugin().packet_start(line):
                 self._should_add_line = True
-            elif self._plugin.packet_end(line):
+            elif self._get_plugin().packet_end(line):
                 self._should_add_line = False
                 self._data.pop()
                 res = self._export_packet()
@@ -81,5 +95,5 @@ class DxPacketParser:
 
             return res
         except IndexError:
-            print('Parsing of the AX log failed. Probably bad format choosen. Quitting...')
+            print('Parsing of the AX log failed. Probably unknown hex dump format. Quitting...')
             sys.exit(1)
