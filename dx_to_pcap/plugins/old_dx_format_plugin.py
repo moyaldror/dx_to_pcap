@@ -29,6 +29,9 @@ class OldDxFormatPlugin(BasePlugin):
         self._prev_line = line
         return res
 
+    def get_hex_from_line(self, line):
+        return ''.join(line.strip().split('   ')[:2]).replace(' ', '').strip()
+
     def get_ascii_from_line(self, line):
         return line.strip().split('   ')[len(line.split('   ')) - 1].strip()
 

@@ -62,11 +62,22 @@ for mp in mp_nums.keys():
         for i in range(50, -1, -1):
             dx_file = 'dx_write.tmp.mp{}.sp{}{}'.format(mp, sp, '.{}'.format(i) if i > 0 else '')
             try:
-                with open(dx_file, 'r') as f:
+                with open(dx_file, 'rb') as f:
                     print('Parsing ', dx_file)
                     packet_parser = DxPacketParser()
 
                     for line in f.readlines():
+                        try:
+                            line = line.decode('utf8')
+                        except UnicodeDecodeError:
+                            new_line = []
+                            for c in line:
+                                try:
+                                    c = chr(c)
+                                except UnicodeDecodeError:
+                                    c = format(c, '02x')
+                                new_line.append(c)
+                            line = ''.join(new_line)
                         res = packet_parser.consume_line(line.strip())
                         if res is not None:
                             if os.stat(output_file_name.format(mp, sp, output_file_index)).st_size >= max_output_size:
