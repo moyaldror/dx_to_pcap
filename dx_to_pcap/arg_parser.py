@@ -33,6 +33,9 @@ class DxToPcapArgParser:
                                  action='store', dest='max_pcap_size',
                                  help='Maximum pcap file size (MB). When max size reached a new file will be created. '
                                  'Acceptable values are positive float numbers')
+        self.parser.add_argument('--use_old_dx_format', action='store_true',
+                                 help='Use old AX dx_write format. Default in the new format')
+
 
     def parse_args(self, args=sys.argv[1:]):
         args = self.parser.parse_args(args)

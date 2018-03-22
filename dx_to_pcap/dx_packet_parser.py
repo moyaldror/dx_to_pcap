@@ -17,17 +17,23 @@ except ImportError:
 
 class DxPacketParser:
     _PLUGINS = [NewDxFormatPlugin(), OldDxFormatPlugin()]
+    #_PLUGINS = [OldDxFormatPlugin()]
 
-    def __init__(self):
+    def __init__(self, _plugin = 0):
+        if _plugin == 0:
+            self._can_toggle = True
+        else:
+            self._can_toggle = False
         self._data = []
-        self._plugin = 0
+        self._plugin = _plugin
         self._should_add_line = False
 
     def _get_plugin(self):
         return self._PLUGINS[self._plugin]
 
     def _toggle_parser_plugin(self):
-        self._plugin = (self._plugin + 1) % 2
+        if self._can_toggle:
+            self._plugin = (self._plugin + 1) % 2
 
     def _fix_packet(self):
         res = []
@@ -74,8 +80,10 @@ class DxPacketParser:
         data_io.append(chr(4))
         pkt = self._read_hex(data=data_io)
         if pkt.getlayer(TCP) is None:
-           self._toggle_parser_plugin()
-           pkt = self._read_hex(data=data_io)
+            self._toggle_parser_plugin()
+            pkt = self._read_hex(data=data_io)
+            if pkt.getlayer(TCP) is None:
+                raise Exception('Failed to parse packet')
         return pkt
 
     def consume_line(self, line):
