@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 in_files = args.dx_files
 max_output_size = args.max_pcap_size
-use_old_format = args.use_old_dx_format
+dx_format = args.dx_format
 
 mp_nums = OrderedDict()
 output_file_name = 'mp{}.sp{}.{}.pcap'
@@ -65,7 +65,7 @@ for mp in mp_nums.keys():
             try:
                 with open(dx_file, 'rb') as f:
                     print('Parsing ', dx_file)
-                    packet_parser = DxPacketParser(1 if use_old_format else 0)
+                    packet_parser = DxPacketParser(dx_plugin=dx_format)
 
                     for line in f.readlines():
                         try:

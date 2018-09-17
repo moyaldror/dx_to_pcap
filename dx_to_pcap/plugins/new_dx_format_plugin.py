@@ -13,6 +13,9 @@ class NewDxFormatPlugin(BasePlugin):
     def __init__(self):
         self._prev_line = ''
 
+    def get_plugin_name(self):
+        return 'NewDxFormat'
+
     def packet_start(self, line):
         res = False
         if self.START in line and self.PREV in self._prev_line:

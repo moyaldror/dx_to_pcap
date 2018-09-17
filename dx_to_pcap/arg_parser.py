@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import argparse
 import sys
 
+from dx_to_pcap.plugins.plugin_repository import PluginRepository
+
 
 def non_negative_float(value):
     try:
@@ -17,6 +19,7 @@ def non_negative_float(value):
 
 class DxToPcapArgParser:
     _MAX_PCAP_SIZE = 5  # MB
+    _PLUGIN_REPO = PluginRepository()
 
     def __init__(self):
         self.parser = argparse.ArgumentParser(prog='dx_to_pcap',
@@ -33,8 +36,10 @@ class DxToPcapArgParser:
                                  action='store', dest='max_pcap_size',
                                  help='Maximum pcap file size (MB). When max size reached a new file will be created. '
                                  'Acceptable values are positive float numbers')
-        self.parser.add_argument('--use_old_dx_format', action='store_true',
-                                 help='Use old AX dx_write format. Default in the new format')
+        self.parser.add_argument('--dx_format', action='store', dest='dx_format',
+                                 default=self._PLUGIN_REPO.plugins[0].get_plugin_name(),
+                                 choices=self._PLUGIN_REPO.get_available_plugins(),
+                                 help='Dx file format to use.')
 
 
     def parse_args(self, args=sys.argv[1:]):

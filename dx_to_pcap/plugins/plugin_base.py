@@ -5,6 +5,10 @@ class BasePlugin:
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def get_plugin_name(self):
+        raise NotImplementedError()
+
+    @abstractmethod
     def packet_start(self, line):
         raise NotImplementedError()
 
